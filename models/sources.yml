@@ -1,0 +1,419 @@
+version: 2
+
+sources:
+  - name: erp
+    description: Bronze/staging pass-through tables landed from the ERP wholesale system. Persistent Staging Area pattern -- append-only, no transformation applied at this layer.
+    database: SQLDBM_DEMO
+    schema: HEATHER_STG_ERP
+    loader: PLACEHOLDER_TOOL_NAME  # fill in your actual ERP ingestion tool
+    config:
+      loaded_at_field: LOAD_TIMESTAMP
+      meta:
+        owner: heather.ready@sqldbm.com
+        layer: bronze
+      tags:
+        - erp
+        - stage
+        - bronze
+      freshness:
+        warn_after:
+          count: 24
+          period: hour
+        error_after:
+          count: 48
+          period: hour
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    tables:
+      - name: STG_ERP_CUSTOMER
+        description: Staging table for ERP customer master data (wholesale). Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: CUSTKEY"
+          - name: CUSTKEY
+            description: ERP customer master key (business key)
+          - name: NAME
+            description: Name of the customer
+          - name: ADDRESS
+            description: Address of the customer
+          - name: NATIONKEY
+            description: Referenced nation business key -- virtual relationship only
+          - name: PHONE
+            description: Contact phone number of the customer
+          - name: ACCTBAL
+            description: Account balance of the customer
+          - name: MKTSEGMENT
+            description: Market segment classification of the customer
+          - name: COMMENT
+            description: Additional comments about the customer
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_NATION
+        description: Staging table for ERP nation reference data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: NATIONKEY"
+          - name: NATIONKEY
+            description: ERP nation identifier (business key)
+          - name: NAME
+            description: Name of the nation
+          - name: REGIONKEY
+            description: Referenced region business key -- virtual relationship only, hashed into HUB_REGION in Raw Vault
+          - name: COMMENT
+            description: Additional comments about the nation
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_ORDER_LINES
+        description: Staging table for ERP wholesale order line items. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own composite business key: ORDERKEY + LINENUMBER"
+          - name: ORDERKEY
+            description: Referenced order business key -- virtual relationship only
+          - name: PARTKEY
+            description: Referenced part business key -- virtual relationship only
+          - name: SUPPKEY
+            description: Referenced supplier business key -- virtual relationship only
+          - name: LINENUMBER
+            description: Line item number within an order (part of this table's own business key)
+          - name: QUANTITY
+            description: Quantity of the item ordered
+          - name: EXTENDEDPRICE
+            description: Extended price of the item (quantity * unit price)
+          - name: DISCOUNT
+            description: Discount rate applied to the item, as a decimal fraction
+          - name: TAX
+            description: Tax rate applied to the item, as a decimal fraction
+          - name: RETURNFLAG
+            description: Return status of the item
+          - name: LINESTATUS
+            description: Status of the line item
+          - name: SHIPDATE
+            description: Date the item was shipped
+          - name: COMMITDATE
+            description: Date the item was committed for shipping
+          - name: RECEIPTDATE
+            description: Date the item was received
+          - name: SHIPINSTRUCT
+            description: Shipping instructions for the item
+          - name: SHIPMODE
+            description: Shipping mode for the item
+          - name: COMMENT
+            description: Additional comments about the line item
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_ORDERS
+        description: Staging table for ERP wholesale order headers. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: ORDERKEY"
+          - name: ORDERKEY
+            description: ERP order header key (business key)
+          - name: CUSTKEY
+            description: Referenced customer business key -- virtual relationship only
+          - name: ORDERSTATUS
+            description: Status of the order (O/F/P)
+          - name: TOTALPRICE
+            description: Total price of the order
+          - name: ORDERDATE
+            description: Date when the order was placed
+          - name: ORDERPRIORITY
+            description: Priority of the order
+          - name: CLERK
+            description: Clerk responsible for the order
+          - name: SHIPPRIORITY
+            description: Shipping priority of the order
+          - name: COMMENT
+            description: Additional comments about the order
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_PART
+        description: Staging table for ERP part master data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: PARTKEY"
+          - name: PARTKEY
+            description: ERP part master key (business key)
+          - name: NAME
+            description: Name of the part
+          - name: MFGR
+            description: Manufacturer of the part
+          - name: BRAND
+            description: Brand of the part
+          - name: TYPE
+            description: Type or category of the part
+          - name: SIZE
+            description: Size of the part
+          - name: CONTAINER
+            description: Container type used for the part
+          - name: RETAILPRICE
+            description: Retail price of the part
+          - name: COMMENT
+            description: Additional comments about the part
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_REGION
+        description: Staging table for ERP region reference data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: REGIONKEY"
+          - name: REGIONKEY
+            description: ERP region identifier (business key, not enforced as PK here)
+          - name: NAME
+            description: Name of the region
+          - name: COMMENT
+            description: Additional comments about the region
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_ERP_SUPPLIER
+        description: Staging table for ERP supplier master data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: SUPPLIERKEY"
+          - name: SUPPLIERKEY
+            description: ERP supplier master key (business key)
+          - name: SUPPLIERNAME
+            description: Name of the supplier
+          - name: ADDRESS
+            description: Address of the supplier
+          - name: NATIONKEY
+            description: Referenced nation business key -- virtual relationship only
+          - name: PHONE
+            description: Contact phone number of the supplier
+          - name: ACCOUNTBALANCE
+            description: Account balance of the supplier
+          - name: COMMENT
+            description: Additional comments about the supplier
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+  - name: pos
+    description: Bronze/staging pass-through tables landed from in-store POS. Persistent Staging Area pattern -- append-only, no transformation applied at this layer. Business keys, typing, and naming are intentionally different from ERP to reflect a real POS export.
+    database: SQLDBM_DEMO
+    schema: HEATHER_STG_POS
+    loader: PLACEHOLDER_TOOL_NAME  # fill in your actual POS ingestion tool
+    config:
+      loaded_at_field: LOAD_TIMESTAMP
+      meta:
+        owner: heather.ready@sqldbm.com
+        layer: bronze
+      tags:
+        - pos
+        - stage
+        - bronze
+      freshness:
+        warn_after:
+          count: 12
+          period: hour
+        error_after:
+          count: 24
+          period: hour
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    tables:
+      - name: STG_POS_CUSTOMER
+        description: Staging table for POS loyalty customer data (retail). Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: LOYALTY_ID"
+          - name: LOYALTY_ID
+            description: POS loyalty program identifier (business key) -- different flavor than ERP CUSTKEY
+          - name: CUST_NAME
+            description: Customer name as captured at POS
+          - name: CUST_PHONE
+            description: Customer phone as captured at POS
+          - name: HOME_STORE_ID
+            description: Referenced store business key -- virtual relationship only
+          - name: SIGNUP_DATE_TXT
+            description: Loyalty signup date landed as text
+          - name: FILE_LOAD_DATE
+            description: Source-asserted file date, landed as text
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_POS_SALE
+        description: Staging table for POS sale (transaction header) data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: SALE_TICKET_NO"
+          - name: SALE_TICKET_NO
+            description: POS sale ticket number (business key) -- different flavor than ERP ORDERKEY
+          - name: LOYALTY_ID
+            description: Referenced loyalty customer business key -- virtual relationship only, nullable for non-loyalty sales
+          - name: STORE_ID
+            description: Referenced store business key -- virtual relationship only
+          - name: SALE_DATE_TXT
+            description: Sale date landed as text
+          - name: SALE_STATUS
+            description: POS sale status -- different domain values than ERP ORDERSTATUS (e.g. COMPLETED, VOIDED, RETURNED)
+          - name: CASHIER_NAME
+            description: Name of the cashier who processed the sale
+          - name: FILE_LOAD_DATE
+            description: Source-asserted file date, landed as text
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_POS_STORE
+        description: Staging table for POS store reference data. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: STORE_ID"
+          - name: STORE_ID
+            description: POS store identifier, e.g. STR-004 (business key)
+          - name: STORE_NAME
+            description: Store display name
+          - name: STORE_REGION_TXT
+            description: Free-text region name as captured at POS, not conformed to ERP region
+          - name: OPEN_DATE_TXT
+            description: Store open date as captured by the source, landed as text, e.g. 2015-03-01
+          - name: FILE_LOAD_DATE
+            description: Source-asserted file date, landed as text (distinct from LOAD_TIMESTAMP, which is system-generated)
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+  - name: vendor_edi
+    description: Bronze/staging pass-through tables landed from the vendor EDI feed. Persistent Staging Area pattern -- append-only, no transformation applied at this layer. Numeric values land as text per raw EDI convention; casting/cleansing happens in Silver Business.
+    database: SQLDBM_DEMO
+    schema: HEATHER_STG_VENDOR_EDI
+    loader: PLACEHOLDER_TOOL_NAME  # fill in your actual EDI ingestion tool
+    config:
+      loaded_at_field: LOAD_TIMESTAMP
+      meta:
+        owner: heather.ready@sqldbm.com
+        layer: bronze
+      tags:
+        - vendor_edi
+        - stage
+        - bronze
+      freshness:
+        warn_after:
+          count: 36
+          period: hour
+        error_after:
+          count: 72
+          period: hour
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    tables:
+      - name: STG_EDI_BATCH_HEADER
+        description: Staging table for EDI batch/file metadata -- captures file-based ingestion lineage. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: BATCH_ID"
+          - name: BATCH_ID
+            description: EDI batch identifier for this file drop (business key)
+          - name: FILE_NM
+            description: Name of the source EDI file
+          - name: VEND_CD
+            description: Referenced vendor business key -- virtual relationship only
+          - name: RECEIVED_DTTM
+            description: Timestamp the batch file was received
+          - name: RECORD_CNT
+            description: Number of records in the batch, per file trailer
+          - name: PROCESS_STATUS
+            description: Batch processing status (RECEIVED, LOADED, ERROR)
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_EDI_PART
+        description: Staging table for vendor part catalog data from the EDI feed. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: VEND_PART_CD"
+          - name: VEND_PART_CD
+            description: Vendor's own part code (business key) -- different flavor than ERP PARTKEY
+          - name: VEND_PART_DESC
+            description: Vendor's part description text
+          - name: VEND_CD
+            description: Referenced vendor business key -- virtual relationship only
+          - name: UNIT_CST_AMT
+            description: Unit cost, landed as text per raw EDI convention
+          - name: PKG_CD
+            description: Vendor packaging code
+          - name: BATCH_ID
+            description: Referenced batch business key -- virtual relationship only
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_EDI_SUPPLIER
+        description: Staging table for vendor supplier data from the EDI feed. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own business key: VEND_CD"
+          - name: VEND_CD
+            description: Vendor code (business key) -- different flavor than ERP SUPPLIERKEY
+          - name: VEND_NM
+            description: Vendor name
+          - name: VEND_ADDR
+            description: Vendor address, single unparsed field
+          - name: VEND_PHN
+            description: Vendor phone number
+          - name: VEND_BAL_AMT
+            description: Vendor account balance, landed as text per raw EDI convention
+          - name: BATCH_ID
+            description: Referenced batch business key -- virtual relationship only
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run
+
+      - name: STG_EDI_PARTSUPP
+        description: Staging table for vendor part-supply/cost data from the EDI feed. Append-only.
+        columns:
+          - name: STAGE_HASH_KEY
+            description: "Hash of this table's own composite business key: VEND_CD + VEND_PART_CD"
+          - name: VEND_CD
+            description: Referenced vendor business key -- virtual relationship only (part of this table's own business key)
+          - name: VEND_PART_CD
+            description: Referenced vendor part business key -- virtual relationship only (part of this table's own business key)
+          - name: AVAIL_QTY_TXT
+            description: Available quantity, landed as text per raw EDI convention
+          - name: LEAD_TM_DAYS
+            description: Lead time in days, landed as text
+          - name: SUPPLY_CST_AMT
+            description: Supply cost, landed as text per raw EDI convention
+          - name: BATCH_ID
+            description: Referenced batch business key -- virtual relationship only
+          - name: SOURCE_SYSTEM
+            description: Source system code
+          - name: LOAD_TIMESTAMP
+            description: System-generated timestamp of this load run

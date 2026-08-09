@@ -1424,3 +1424,225 @@ models:
         constraints:
           - type: not_null
 
+  - name: sat_customer_business
+    description: 'Satellite -- derived customer tier, computed via business rule, not asserted by any source. Insert-only.'
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns:
+          - CUSTOMER_HASH_KEY
+          - LOAD_DATE
+        name: pk_SAT_CUSTOMER_BUSINESS
+      - type: foreign_key
+        columns:
+          - CUSTOMER_HASH_KEY
+        expression: HEATHER_SILVER_RAW.HUB_CUSTOMER (CUSTOMER_HASH_KEY)
+        name: fk_SAT_CUSTOMER_BUSINESS_HUB_CUSTOMER
+    columns:
+      - name: CUSTOMER_HASH_KEY
+        data_type: varchar(64)
+        description: FK to HEATHER_SILVER_RAW.HUB_CUSTOMER
+        constraints:
+          - type: not_null
+      - name: LOAD_DATE
+        data_type: timestamp_ltz(9)
+        description: Timestamp this version was computed
+        constraints:
+          - type: not_null
+      - name: HASH_DIFF
+        data_type: varchar(64)
+        description: Hash of descriptive columns below
+        constraints:
+          - type: not_null
+      - name: CUSTOMER_TIER
+        data_type: varchar(20)
+        description: Derived business classification, computed from ACCTBAL and MKTSEGMENT
+      - name: RECORD_SOURCE
+        data_type: varchar(50)
+        description: Not a source system -- calculated. Convention -- DBT_DERIVED
+        constraints:
+          - type: not_null
+
+  - name: sal_product
+    description: 'Same-as-link -- asserts that two HUB_PRODUCT rows represent the same real-world product. Insert-only.'
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns:
+          - SAL_PRODUCT_HASH_KEY
+        name: pk_SAL_PRODUCT
+      - type: foreign_key
+        columns:
+          - PRODUCT_HASH_KEY_1
+        expression: HEATHER_SILVER_RAW.HUB_PRODUCT (PRODUCT_HASH_KEY)
+        name: fk_SAL_PRODUCT_HUB_PRODUCT_1
+      - type: foreign_key
+        columns:
+          - PRODUCT_HASH_KEY_2
+        expression: HEATHER_SILVER_RAW.HUB_PRODUCT (PRODUCT_HASH_KEY)
+        name: fk_SAL_PRODUCT_HUB_PRODUCT_2
+    columns:
+      - name: SAL_PRODUCT_HASH_KEY
+        data_type: varchar(64)
+        description: Hash of the two participating PRODUCT_HASH_KEY values
+        constraints:
+          - type: not_null
+      - name: PRODUCT_HASH_KEY_1
+        data_type: varchar(64)
+        description: FK to HUB_PRODUCT -- one side of the match
+        constraints:
+          - type: not_null
+      - name: PRODUCT_HASH_KEY_2
+        data_type: varchar(64)
+        description: FK to HUB_PRODUCT -- the other side of the match
+        constraints:
+          - type: not_null
+      - name: RECORD_SOURCE
+        data_type: varchar(50)
+        description: Not a source system -- derived judgment. Convention -- DBT_DERIVED
+        constraints:
+          - type: not_null
+      - name: LOAD_DATE
+        data_type: timestamp_ltz(9)
+        description: Timestamp this match was first asserted
+        constraints:
+          - type: not_null
+
+  - name: sat_sal_product_match
+    description: 'Satellite -- rationale for a product same-as match, computed by dbt matching logic. Insert-only.'
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns:
+          - SAL_PRODUCT_HASH_KEY
+          - LOAD_DATE
+        name: pk_SAT_SAL_PRODUCT_MATCH
+      - type: foreign_key
+        columns:
+          - SAL_PRODUCT_HASH_KEY
+        expression: HEATHER_SILVER_BUSINESS.SAL_PRODUCT (SAL_PRODUCT_HASH_KEY)
+        name: fk_SAT_SAL_PRODUCT_MATCH_SAL_PRODUCT
+    columns:
+      - name: SAL_PRODUCT_HASH_KEY
+        data_type: varchar(64)
+        description: FK to SAL_PRODUCT
+        constraints:
+          - type: not_null
+      - name: LOAD_DATE
+        data_type: timestamp_ltz(9)
+        description: Timestamp this version was recorded
+        constraints:
+          - type: not_null
+      - name: HASH_DIFF
+        data_type: varchar(64)
+        description: Hash of descriptive columns below
+        constraints:
+          - type: not_null
+      - name: MATCH_METHOD
+        data_type: varchar(50)
+        description: How the match was determined
+      - name: MATCH_CONFIDENCE
+        data_type: number(5,2)
+        description: Confidence score for the match, 0-100
+      - name: RECORD_SOURCE
+        data_type: varchar(50)
+        description: Not a source system -- derived. Convention -- DBT_DERIVED
+        constraints:
+          - type: not_null
+
+  - name: sal_supplier
+    description: 'Same-as-link -- asserts that two HUB_SUPPLIER rows represent the same real-world supplier. Insert-only.'
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns:
+          - SAL_SUPPLIER_HASH_KEY
+        name: pk_SAL_SUPPLIER
+      - type: foreign_key
+        columns:
+          - SUPPLIER_HASH_KEY_1
+        expression: HEATHER_SILVER_RAW.HUB_SUPPLIER (SUPPLIER_HASH_KEY)
+        name: fk_SAL_SUPPLIER_HUB_SUPPLIER_1
+      - type: foreign_key
+        columns:
+          - SUPPLIER_HASH_KEY_2
+        expression: HEATHER_SILVER_RAW.HUB_SUPPLIER (SUPPLIER_HASH_KEY)
+        name: fk_SAL_SUPPLIER_HUB_SUPPLIER_2
+    columns:
+      - name: SAL_SUPPLIER_HASH_KEY
+        data_type: varchar(64)
+        description: Hash of the two participating SUPPLIER_HASH_KEY values
+        constraints:
+          - type: not_null
+      - name: SUPPLIER_HASH_KEY_1
+        data_type: varchar(64)
+        description: FK to HUB_SUPPLIER -- one side of the match
+        constraints:
+          - type: not_null
+      - name: SUPPLIER_HASH_KEY_2
+        data_type: varchar(64)
+        description: FK to HUB_SUPPLIER -- the other side of the match
+        constraints:
+          - type: not_null
+      - name: RECORD_SOURCE
+        data_type: varchar(50)
+        description: Not a source system -- derived judgment. Convention -- DBT_DERIVED
+        constraints:
+          - type: not_null
+      - name: LOAD_DATE
+        data_type: timestamp_ltz(9)
+        description: Timestamp this match was first asserted
+        constraints:
+          - type: not_null
+
+  - name: sat_sal_supplier_match
+    description: 'Satellite -- rationale for a supplier same-as match, computed by dbt matching logic. Insert-only.'
+    config:
+      contract:
+        enforced: true
+    constraints:
+      - type: primary_key
+        columns:
+          - SAL_SUPPLIER_HASH_KEY
+          - LOAD_DATE
+        name: pk_SAT_SAL_SUPPLIER_MATCH
+      - type: foreign_key
+        columns:
+          - SAL_SUPPLIER_HASH_KEY
+        expression: HEATHER_SILVER_BUSINESS.SAL_SUPPLIER (SAL_SUPPLIER_HASH_KEY)
+        name: fk_SAT_SAL_SUPPLIER_MATCH_SAL_SUPPLIER
+    columns:
+      - name: SAL_SUPPLIER_HASH_KEY
+        data_type: varchar(64)
+        description: FK to SAL_SUPPLIER
+        constraints:
+          - type: not_null
+      - name: LOAD_DATE
+        data_type: timestamp_ltz(9)
+        description: Timestamp this version was recorded
+        constraints:
+          - type: not_null
+      - name: HASH_DIFF
+        data_type: varchar(64)
+        description: Hash of descriptive columns below
+        constraints:
+          - type: not_null
+      - name: MATCH_METHOD
+        data_type: varchar(50)
+        description: How the match was determined
+      - name: MATCH_CONFIDENCE
+        data_type: number(5,2)
+        description: Confidence score for the match, 0-100
+      - name: RECORD_SOURCE
+        data_type: varchar(50)
+        description: Not a source system -- derived. Convention -- DBT_DERIVED
+        constraints:
+          - type: not_null

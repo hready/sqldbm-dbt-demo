@@ -1,0 +1,102 @@
+name: SEMANTIC_MODEL_1
+tables:
+- name: DIM_CUSTOMER
+  description: 'Gold dimension: consumption-ready wholesale customer, built from HUB_CUSTOMER + SAT_CUSTOMER_ERP (current) + SAT_CUSTOMER_BUSINESS (current tier). Refreshed as a full snapshot on each dbt run.'
+  base_table:
+    database: SQLDBM_DEMO
+    schema: HEATHER_GOLD
+    table: DIM_CUSTOMER
+  primary_key:
+    columns:
+    - CUSTOMER_HASH_KEY
+  dimensions:
+  - name: CUSTOMER_HASH_KEY
+    description: Reused from HEATHER_SILVER_RAW.HUB_CUSTOMER -- same key, joinable straight back to Silver
+    expr: CUSTOMER_HASH_KEY
+    data_type: varchar(64)
+    unique: true
+  - name: NAME
+    description: Name of the customer
+    expr: NAME
+    data_type: varchar(25)
+  - name: ADDRESS
+    description: Address of the customer
+    expr: ADDRESS
+    data_type: varchar(40)
+  - name: PHONE
+    description: Contact phone number of the customer
+    expr: PHONE
+    data_type: varchar(15)
+  - name: MKTSEGMENT
+    description: Market segment classification of the customer
+    expr: MKTSEGMENT
+    data_type: varchar(10)
+  - name: CUSTOMER_TIER
+    description: Derived business classification, from HEATHER_SILVER_BUSINESS.SAT_CUSTOMER_BUSINESS
+    expr: CUSTOMER_TIER
+    data_type: varchar(20)
+  - name: RECORD_SOURCE
+    description: Source system for the base attributes (business rule fields are DBT_DERIVED upstream)
+    expr: RECORD_SOURCE
+    data_type: varchar(50)
+  facts:
+  - name: CUSTKEY
+    description: Degenerate business key, retained for filtering/readability
+    expr: CUSTKEY
+    data_type: number(38,0)
+    access_modifier: public_access
+  - name: ACCTBAL
+    description: Account balance of the customer
+    expr: ACCTBAL
+    data_type: number(12,2)
+    access_modifier: public_access
+- name: FACT_ORDER
+  description: 'Gold fact: consumption-ready wholesale order, built from LNK_ORDER + SAT_ORDER_ERP (current). Refreshed as a full snapshot on each dbt run.'
+  base_table:
+    database: SQLDBM_DEMO
+    schema: HEATHER_GOLD
+    table: FACT_ORDER
+  primary_key:
+    columns:
+    - LNK_ORDER_HASH_KEY
+  dimensions:
+  - name: LNK_ORDER_HASH_KEY
+    description: Reused from HEATHER_SILVER_RAW.LNK_ORDER -- same key, joinable straight back to Silver
+    expr: LNK_ORDER_HASH_KEY
+    data_type: varchar(64)
+    unique: true
+  - name: CUSTOMER_HASH_KEY
+    description: FK to DIM_CUSTOMER
+    expr: CUSTOMER_HASH_KEY
+    data_type: varchar(64)
+  - name: ORDERSTATUS
+    description: Status of the order (O/F/P)
+    expr: ORDERSTATUS
+    data_type: varchar(1)
+  - name: ORDERPRIORITY
+    description: Priority of the order
+    expr: ORDERPRIORITY
+    data_type: varchar(15)
+  time_dimensions:
+  - name: ORDERDATE
+    description: Date when the order was placed
+    expr: ORDERDATE
+    data_type: date
+  facts:
+  - name: ORDERKEY
+    description: Degenerate business key, retained for filtering/readability
+    expr: ORDERKEY
+    data_type: number(38,0)
+    access_modifier: public_access
+  - name: TOTALPRICE
+    description: Total price of the order
+    expr: TOTALPRICE
+    data_type: number(12,2)
+    access_modifier: public_access
+relationships:
+- name: fk_FACT_ORDER_DIM_CUSTOMER
+  left_table: FACT_ORDER
+  right_table: DIM_CUSTOMER
+  relationship_columns:
+  - left_column: CUSTOMER_HASH_KEY
+    right_column: CUSTOMER_HASH_KEY

@@ -71,12 +71,12 @@ tables:
     expr: ACCTBAL
     data_type: number(12,2)
     access_modifier: private_access
-  - name: Filter
+  - name: Customer_Filter
     synonyms:
     - Customer Filters
     - Active Customers
     - Selection Criteria
-    expr: ''
+    expr: CUSTOMER_HASH_KEY IS NOT NULL AND NAME IS NOT NULL AND CUSTOMER_TIER IS NOT NULL
     data_type: BOOLEAN
     access_modifier: public_access
     labels:
@@ -163,6 +163,15 @@ tables:
     description: Total price of the order
     expr: TOTALPRICE
     data_type: number(12,2)
+    access_modifier: public_access
+  metrics:
+  - name: Age
+    synonyms:
+    - Days Since Order
+    - Order Age
+    - Order Duration
+    description: Number of days elapsed since the order was placed
+    expr: DATEDIFF(day, ORDERDATE, CURRENT_DATE())
     access_modifier: public_access
 metrics:
 - name: Total_Revenue

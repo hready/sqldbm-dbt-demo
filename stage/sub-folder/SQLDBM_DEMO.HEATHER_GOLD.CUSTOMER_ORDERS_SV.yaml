@@ -1,0 +1,189 @@
+name: CUSTOMER_ORDERS_SV
+tables:
+- name: DIM_CUSTOMER
+  description: 'Gold dimension: consumption-ready wholesale customer, built from HUB_CUSTOMER + SAT_CUSTOMER_ERP (current) + SAT_CUSTOMER_BUSINESS (current tier). Refreshed as a full snapshot on each dbt run.'
+  base_table:
+    database: SQLDBM_DEMO
+    schema: HEATHER_GOLD
+    table: DIM_CUSTOMER
+  dimensions:
+  - name: NAME
+    synonyms:
+    - Customer Name
+    - Organization Name
+    - Business Name
+    description: Name of the customer
+    expr: NAME
+    data_type: varchar(25)
+    is_enum: false
+    sample_values:
+    - John Doe
+  - name: ADDRESS
+    synonyms:
+    - Customer Address
+    - Location
+    - Billing Address
+    description: Address of the customer
+    expr: ADDRESS
+    data_type: varchar(40)
+    is_enum: false
+    sample_values:
+    - 101 Main St
+  - name: PHONE
+    synonyms:
+    - Contact Number
+    - Telephone
+    - Phone Number
+    description: Contact phone number of the customer
+    expr: PHONE
+    data_type: varchar(15)
+    is_enum: false
+    sample_values:
+    - xxx-xxx-xxxx
+  - name: MKTSEGMENT
+    synonyms:
+    - Market Segment
+    - Customer Segment
+    - Business Segment
+    description: Market segment classification of the customer
+    expr: MKTSEGMENT
+    data_type: varchar(10)
+    is_enum: false
+    sample_values: []
+  - name: CUSTOMER_TIER
+    synonyms:
+    - Customer Classification
+    - Tier Level
+    - Account Tier
+    description: Derived business classification, from HEATHER_SILVER_BUSINESS.SAT_CUSTOMER_BUSINESS
+    expr: CUSTOMER_TIER
+    data_type: varchar(20)
+    is_enum: false
+    sample_values:
+    - High_Value
+  facts:
+  - name: ACCTBAL
+    synonyms:
+    - Account Balance
+    - Customer Balance
+    - Balance Due
+    description: Account balance of the customer
+    expr: ACCTBAL
+    data_type: number(12,2)
+    access_modifier: private_access
+  - name: Filter
+    synonyms:
+    - Customer Filters
+    - Active Customers
+    - Selection Criteria
+    expr: ''
+    data_type: BOOLEAN
+    access_modifier: public_access
+    labels:
+    - filter
+  metrics:
+  - name: Metric
+    synonyms:
+    - Customer Count
+    - Total Customers
+    - Customer Volume
+    expr: ''
+    access_modifier: public_access
+- name: FACT_ORDER
+  description: 'Gold fact: consumption-ready wholesale order, built from LNK_ORDER + SAT_ORDER_ERP (current). Refreshed as a full snapshot on each dbt run.'
+  base_table:
+    database: SQLDBM_DEMO
+    schema: HEATHER_GOLD
+    table: FACT_ORDER
+  primary_key:
+    columns:
+    - LNK_ORDER_HASH_KEY
+  dimensions:
+  - name: LNK_ORDER_HASH_KEY
+    synonyms: []
+    description: Reused from HEATHER_SILVER_RAW.LNK_ORDER -- same key, joinable straight back to Silver
+    expr: LNK_ORDER_HASH_KEY
+    data_type: varchar(64)
+    unique: true
+    is_enum: false
+  - name: CUSTOMER_HASH_KEY
+    synonyms:
+    - Customer Identifier
+    - Customer Link Key
+    - Customer Surrogate Key
+    description: FK to DIM_CUSTOMER
+    expr: CUSTOMER_HASH_KEY
+    data_type: varchar(64)
+    is_enum: false
+  - name: ORDERSTATUS
+    synonyms:
+    - Order State
+    - Fulfillment Status
+    - Order Condition
+    description: Status of the order (O/F/P)
+    expr: ORDERSTATUS
+    data_type: varchar(1)
+    is_enum: false
+    sample_values:
+    - Completed
+    - Pending
+  - name: ORDERPRIORITY
+    synonyms:
+    - Order Urgency
+    - Priority Level
+    - Fulfillment Priority
+    description: Priority of the order
+    expr: ORDERPRIORITY
+    data_type: varchar(15)
+    is_enum: false
+  time_dimensions:
+  - name: ORDERDATE
+    synonyms:
+    - Order Placement Date
+    - Order Creation Date
+    - Order Received Date
+    description: Date when the order was placed
+    expr: ORDERDATE
+    data_type: date
+  facts:
+  - name: ORDERKEY
+    synonyms:
+    - Order Number
+    - Order ID
+    - Order Identifier
+    description: Degenerate business key, retained for filtering/readability
+    expr: ORDERKEY
+    data_type: number(38,0)
+    access_modifier: public_access
+  - name: TOTALPRICE
+    synonyms:
+    - Order Total Amount
+    - Order Value
+    - Order Total Cost
+    description: Total price of the order
+    expr: TOTALPRICE
+    data_type: number(12,2)
+    access_modifier: public_access
+metrics:
+- name: Total_Revenue
+  synonyms:
+  - Total Amount Earned
+  expr: SUM(FACT_ORDER.TOTALPRICE)
+  access_modifier: private_access
+verified_queries:
+- name: Revenue_by_Market_Segment
+  question: What is the total revenue and order count by market segment?
+  sql: |-
+    SELECT c.MKTSEGMENT, 
+    COUNT(o.LNK_ORDER_HASH_KEY) AS order_count, 
+    SUM(o.TOTALPRICE) AS total_revenue 
+    FROM SQLDBM_DEMO.HEATHER_GOLD.FACT_ORDER AS o 
+    JOIN SQLDBM_DEMO.HEATHER_GOLD.DIM_CUSTOMER AS c 
+    ON o.CUSTOMER_HASH_KEY = c.CUSTOMER_HASH_KEY 
+    GROUP BY c.MKTSEGMENT 
+    ORDER BY total_revenue DESC
+  use_as_onboarding_question: false
+- name: Revenue_by_Customer_Tier
+  question: What is the total revenue and order count by customer tier?
+  sql: SELECT c.CUSTOMER_TIER, COUNT(o.LNK_ORDER_HASH_KEY) AS order_count, SUM(o.TOTALPRICE) AS total_revenue FROM SQLDBM_DEMO.HEATHER_GOLD.FACT_ORDER AS o JOIN SQLDBM_DEMO.HEATHER_GOLD.DIM_CUSTOMER AS c ON o.CUSTOMER_HASH_KEY = c.CUSTOMER_HASH_KEY GROUP BY c.CUSTOMER_TIER ORDER BY total_revenue DESC
+  use_as_onboarding_question: false
